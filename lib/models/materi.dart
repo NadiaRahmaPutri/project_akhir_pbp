@@ -10,4 +10,13 @@ class Materi {
     required this.ringkasan,
     required this.isi,
   });
+
+  factory Materi.fromMap(Map<String, dynamic> map) {
+    return Materi(
+      id: map['id'] as int,
+      judul: map['judul'] as String,
+      ringkasan: (map['ringkasan'] ?? '') as String,
+      isi: (map['isi'] ?? '') as String,
+    );
+  }
 }

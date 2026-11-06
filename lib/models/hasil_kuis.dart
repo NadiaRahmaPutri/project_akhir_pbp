@@ -10,4 +10,12 @@ class HasilKuis {
   });
 
   int get skor => total == 0 ? 0 : ((benar / total) * 100).round();
+
+  factory HasilKuis.fromMap(Map<String, dynamic> map) {
+    return HasilKuis(
+      waktu: DateTime.parse(map['created_at'] as String).toLocal(),
+      benar: map['benar'] as int,
+      total: map['total'] as int,
+    );
+  }
 }
