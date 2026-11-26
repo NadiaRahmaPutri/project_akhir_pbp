@@ -1,3 +1,4 @@
+import 'kelola_screen.dart';
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../widgets/error_view.dart';
@@ -90,8 +91,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: const Text('Kelola materi dan soal'),
                     subtitle: const Text('Khusus guru'),
                     trailing: const Icon(Icons.chevron_right),
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Fitur ini dibuat minggu depan.')),
+                    onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const KelolaScreen()),
                     ),
                   ),
                 ),
