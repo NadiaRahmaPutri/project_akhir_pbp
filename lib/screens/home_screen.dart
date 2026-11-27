@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/kelas_service.dart';
 import '../services/supabase_service.dart';
 import '../widgets/error_view.dart';
 import 'kelas_screen.dart';
-import 'kuis_screen.dart';
-import 'materi_list_screen.dart';
-import 'riwayat_screen.dart';
+import 'profil_screen.dart';
+import 'siswa_kelas_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,9 +16,66 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Future<Map<String, dynamic>?> _profil = SupabaseService.fetchProfil();
+  late Future<List<Kelas>> _kelas = KelasService.fetchKelas();
 
   void _muatUlang() {
     setState(() => _profil = SupabaseService.fetchProfil());
+  }
+
+  void _muatKelas() {
+    setState(() => _kelas = KelasService.fetchKelas());
+  }
+
+  void _pesan(String teks) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(teks), duration: const Duration(seconds: 8)),
+    );
+  }
+
+  /// Mahasiswa yang NIM-nya masih kosong (akun lama) mengisinya di sini.
+  Future<void> _isiNim() async {
+    final ctrl = TextEditingController();
+    final nim = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Isi NIM'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.characters,
+          decoration: const InputDecoration(
+            labelText: 'NIM',
+            hintText: 'Contoh: 2211001',
+          ),
+          onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+    if (nim == null || nim.isEmpty) return;
+
+    try {
+      await KelasService.perbaikiNim(nim);
+      if (!mounted) return;
+      _pesan('NIM tersimpan. Kelasmu akan muncul sesuai daftar dosen.');
+      _muatUlang();
+      _muatKelas();
+    } on PostgrestException catch (e) {
+      if (!mounted) return;
+      _pesan(e.message);
+    } catch (_) {
+      if (!mounted) return;
+      _pesan('Gagal menyimpan NIM. Periksa koneksi internet.');
+    }
   }
 
   @override
@@ -26,6 +84,19 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Media Pembelajaran & Kuis'),
         actions: [
+          IconButton(
+            tooltip: 'Akun saya',
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfilScreen()),
+              );
+              if (!mounted) return;
+              _muatUlang();
+              _muatKelas();
+            },
+          ),
           IconButton(
             tooltip: 'Keluar',
             icon: const Icon(Icons.logout),
@@ -53,39 +124,82 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _Sapaan(nama: nama, isGuru: isGuru),
               const SizedBox(height: 20),
-              if (isGuru) ...const [
-                // Menu khusus guru
-                _MenuTile(
+              if (isGuru)
+                const _MenuTile(
                   icon: Icons.class_,
                   judul: 'Kelas saya',
                   keterangan: 'Kelola materi, soal, dan nilai per kelas',
-                  tujuan: KelasScreen(isGuru: true),
+                  tujuan: KelasScreen(),
+                )
+              else ...[
+                if (((profil?['nim'] as String?) ?? '').isEmpty) ...[
+                  Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.badge_outlined),
+                      title: const Text('NIM belum diisi'),
+                      subtitle: const Text(
+                        'Isi NIM agar kelasmu muncul otomatis.',
+                      ),
+                      trailing: TextButton(
+                        onPressed: _isiNim,
+                        child: const Text('Isi NIM'),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                const Text(
+                  'Kelas saya',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
                 ),
-              ] else ...const [
-                // Menu khusus siswa
-                _MenuTile(
-                  icon: Icons.login,
-                  judul: 'Gabung kelas',
-                  keterangan: 'Masukkan kode kelas dari guru',
-                  tujuan: KelasScreen(isGuru: false),
-                ),
-                _MenuTile(
-                  icon: Icons.menu_book,
-                  judul: 'Materi',
-                  keterangan: 'Baca modul pembelajaran',
-                  tujuan: MateriListScreen(),
-                ),
-                _MenuTile(
-                  icon: Icons.quiz,
-                  judul: 'Kuis',
-                  keterangan: 'Kerjakan soal pilihan ganda',
-                  tujuan: KuisScreen(),
-                ),
-                _MenuTile(
-                  icon: Icons.history,
-                  judul: 'Riwayat nilai',
-                  keterangan: 'Lihat hasil kuis kamu sendiri',
-                  tujuan: RiwayatScreen(),
+                const SizedBox(height: 12),
+                FutureBuilder<List<Kelas>>(
+                  future: _kelas,
+                  builder: (context, ks) {
+                    if (ks.connectionState != ConnectionState.done) {
+                      return const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+                    if (ks.hasError) {
+                      return Card(
+                        child: ListTile(
+                          title: const Text('Gagal memuat kelas'),
+                          subtitle:
+                              const Text('Periksa koneksi, lalu coba lagi.'),
+                          trailing: TextButton(
+                            onPressed: _muatKelas,
+                            child: const Text('Coba lagi'),
+                          ),
+                        ),
+                      );
+                    }
+                    final daftar = ks.data ?? [];
+                    if (daftar.isEmpty) {
+                      return const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text(
+                            'Belum ada kelas untukmu. Kelas muncul otomatis '
+                            'setelah dosen memasukkan NIM-mu ke daftar kelas.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                    }
+                    return Column(
+                      children: [
+                        for (final k in daftar)
+                          _MenuTile(
+                            icon: Icons.class_,
+                            judul: k.nama,
+                            keterangan: 'Materi, kuis, dan riwayat nilai',
+                            tujuan: SiswaKelasScreen(kelas: k),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ],
@@ -142,7 +256,7 @@ class _Sapaan extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    isGuru ? 'Guru' : 'Siswa',
+                    isGuru ? 'Dosen' : 'Mahasiswa',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,

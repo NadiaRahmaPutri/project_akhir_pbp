@@ -5,17 +5,20 @@ import '../widgets/error_view.dart';
 import 'materi_detail_screen.dart';
 
 class MateriListScreen extends StatefulWidget {
-  const MateriListScreen({super.key});
+  final int kelasId;
+
+  const MateriListScreen({super.key, required this.kelasId});
 
   @override
   State<MateriListScreen> createState() => _MateriListScreenState();
 }
 
 class _MateriListScreenState extends State<MateriListScreen> {
-  late Future<List<Materi>> _future = SupabaseService.fetchMateri();
+  late Future<List<Materi>> _future =
+      SupabaseService.fetchMateri(widget.kelasId);
 
   void _muatUlang() {
-    setState(() => _future = SupabaseService.fetchMateri());
+    setState(() => _future = SupabaseService.fetchMateri(widget.kelasId));
   }
 
   @override

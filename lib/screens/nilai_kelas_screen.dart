@@ -139,7 +139,7 @@ class _NilaiKelasScreenState extends State<NilaiKelasScreen> {
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
-                  'Belum ada siswa di kelas ini. Bagikan kode kelas ke siswa.',
+                  'Belum ada mahasiswa di kelas ini. Tambahkan lewat menu Daftar mahasiswa.',
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -153,7 +153,7 @@ class _NilaiKelasScreenState extends State<NilaiKelasScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        '${data.length} siswa • Kode ${widget.kelas.kode}',
+                        '${data.length} mahasiswa',
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),

@@ -4,8 +4,9 @@ import 'riwayat_screen.dart';
 
 class HasilScreen extends StatelessWidget {
   final HasilKuis hasil;
+  final int kelasId;
 
-  const HasilScreen({super.key, required this.hasil});
+  const HasilScreen({super.key, required this.hasil, required this.kelasId});
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +37,7 @@ class HasilScreen extends StatelessWidget {
               OutlinedButton(
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const RiwayatScreen()),
+                  MaterialPageRoute(builder: (_) => RiwayatScreen(kelasId: kelasId)),
                 ),
                 child: const Text('Lihat riwayat nilai'),
               ),

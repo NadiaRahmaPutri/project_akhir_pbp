@@ -15,13 +15,14 @@ class SupabaseService {
 
   static Future<AuthResponse> register(
     String nama,
+    String nim,
     String email,
     String password,
   ) {
     return _db.auth.signUp(
       email: email,
       password: password,
-      data: {'nama': nama},
+      data: {'nama': nama, 'nim': nim},
     );
   }
 
@@ -34,26 +35,36 @@ class SupabaseService {
     return await _db.from('profiles').select().eq('id', uid).maybeSingle();
   }
 
-  // ---------- Data ----------
-  static Future<List<Materi>> fetchMateri() async {
-    final data = await _db.from('materi').select().order('id');
+  // ---------- Data (semuanya per kelas) ----------
+  static Future<List<Materi>> fetchMateri(int kelasId) async {
+    final data = await _db
+        .from('materi')
+        .select()
+        .eq('kelas_id', kelasId)
+        .order('id');
     return data.map<Materi>((m) => Materi.fromMap(m)).toList();
   }
 
-  static Future<List<Soal>> fetchSoal() async {
-    final data = await _db.from('soal').select().order('id');
+  static Future<List<Soal>> fetchSoal(int kelasId) async {
+    final data =
+        await _db.from('soal').select().eq('kelas_id', kelasId).order('id');
     return data.map<Soal>((m) => Soal.fromMap(m)).toList();
   }
 
-  static Future<void> simpanHasil(int benar, int total) async {
+  static Future<void> simpanHasil(int benar, int total, int kelasId) async {
     // user_id diisi otomatis oleh database (auth.uid()).
-    await _db.from('hasil_kuis').insert({'benar': benar, 'total': total});
+    await _db.from('hasil_kuis').insert({
+      'benar': benar,
+      'total': total,
+      'kelas_id': kelasId,
+    });
   }
 
-  static Future<List<HasilKuis>> fetchRiwayat() async {
+  static Future<List<HasilKuis>> fetchRiwayat(int kelasId) async {
     final data = await _db
         .from('hasil_kuis')
         .select()
+        .eq('kelas_id', kelasId)
         .order('created_at', ascending: false);
     return data.map<HasilKuis>((m) => HasilKuis.fromMap(m)).toList();
   }

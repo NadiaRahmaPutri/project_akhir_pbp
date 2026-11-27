@@ -7,17 +7,19 @@ import '../widgets/error_view.dart';
 import 'hasil_screen.dart';
 
 class KuisScreen extends StatefulWidget {
-  const KuisScreen({super.key});
+  final int kelasId;
+
+  const KuisScreen({super.key, required this.kelasId});
 
   @override
   State<KuisScreen> createState() => _KuisScreenState();
 }
 
 class _KuisScreenState extends State<KuisScreen> {
-  late Future<List<Soal>> _future = SupabaseService.fetchSoal();
+  late Future<List<Soal>> _future = SupabaseService.fetchSoal(widget.kelasId);
 
   void _muatUlang() {
-    setState(() => _future = SupabaseService.fetchSoal());
+    setState(() => _future = SupabaseService.fetchSoal(widget.kelasId));
   }
 
   @override
@@ -37,7 +39,7 @@ class _KuisScreenState extends State<KuisScreen> {
           if (daftar.isEmpty) {
             return const Center(child: Text('Belum ada soal.'));
           }
-          return _KuisBody(soal: daftar);
+          return _KuisBody(soal: daftar, kelasId: widget.kelasId);
         },
       ),
     );
@@ -46,8 +48,9 @@ class _KuisScreenState extends State<KuisScreen> {
 
 class _KuisBody extends StatefulWidget {
   final List<Soal> soal;
+  final int kelasId;
 
-  const _KuisBody({required this.soal});
+  const _KuisBody({required this.soal, required this.kelasId});
 
   @override
   State<_KuisBody> createState() => _KuisBodyState();
@@ -126,7 +129,7 @@ class _KuisBodyState extends State<_KuisBody> {
     final total = widget.soal.length;
 
     try {
-      await SupabaseService.simpanHasil(benar, total);
+      await SupabaseService.simpanHasil(benar, total, widget.kelasId);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -141,7 +144,7 @@ class _KuisBodyState extends State<_KuisBody> {
     final hasil = HasilKuis(waktu: DateTime.now(), benar: benar, total: total);
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => HasilScreen(hasil: hasil)),
+      MaterialPageRoute(builder: (_) => HasilScreen(hasil: hasil, kelasId: widget.kelasId)),
     );
   }
 

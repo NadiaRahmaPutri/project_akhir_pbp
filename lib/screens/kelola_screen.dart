@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/materi.dart';
 import '../models/soal.dart';
+import '../services/kelas_service.dart';
 import '../services/kelola_service.dart';
 import '../services/supabase_service.dart';
 import '../services/trivia_service.dart';
@@ -33,9 +34,23 @@ Future<bool> _konfirmasiHapus(BuildContext context, String nama) async {
   return hasil == true;
 }
 
-/// Halaman khusus guru: kelola materi dan soal.
-class KelolaScreen extends StatelessWidget {
-  const KelolaScreen({super.key});
+/// Halaman guru: kelola materi dan soal untuk satu kelas.
+class KelolaScreen extends StatefulWidget {
+  final Kelas kelas;
+
+  const KelolaScreen({super.key, required this.kelas});
+
+  @override
+  State<KelolaScreen> createState() => _KelolaScreenState();
+}
+
+class _KelolaScreenState extends State<KelolaScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Form tambah materi/soal memakai kelas ini.
+    KelolaService.kelasAktifId = widget.kelas.id;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,12 +58,17 @@ class KelolaScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Kelola materi dan soal'),
+          title: Text('Kelola: ${widget.kelas.nama}'),
           bottom: const TabBar(
             tabs: [Tab(text: 'Materi'), Tab(text: 'Soal')],
           ),
         ),
-        body: const TabBarView(children: [_TabMateri(), _TabSoal()]),
+        body: TabBarView(
+          children: [
+            _TabMateri(kelasId: widget.kelas.id),
+            _TabSoal(kelasId: widget.kelas.id),
+          ],
+        ),
       ),
     );
   }
@@ -56,17 +76,20 @@ class KelolaScreen extends StatelessWidget {
 
 // ======================= TAB MATERI =======================
 class _TabMateri extends StatefulWidget {
-  const _TabMateri();
+  final int kelasId;
+
+  const _TabMateri({required this.kelasId});
 
   @override
   State<_TabMateri> createState() => _TabMateriState();
 }
 
 class _TabMateriState extends State<_TabMateri> {
-  late Future<List<Materi>> _future = SupabaseService.fetchMateri();
+  late Future<List<Materi>> _future =
+      SupabaseService.fetchMateri(widget.kelasId);
 
   void _muat() {
-    setState(() => _future = SupabaseService.fetchMateri());
+    setState(() => _future = SupabaseService.fetchMateri(widget.kelasId));
   }
 
   Future<void> _buka([Materi? materi]) async {
@@ -155,18 +178,20 @@ class _TabMateriState extends State<_TabMateri> {
 
 // ======================= TAB SOAL =======================
 class _TabSoal extends StatefulWidget {
-  const _TabSoal();
+  final int kelasId;
+
+  const _TabSoal({required this.kelasId});
 
   @override
   State<_TabSoal> createState() => _TabSoalState();
 }
 
 class _TabSoalState extends State<_TabSoal> {
-  late Future<List<Soal>> _future = SupabaseService.fetchSoal();
+  late Future<List<Soal>> _future = SupabaseService.fetchSoal(widget.kelasId);
   bool _mengimpor = false;
 
   void _muat() {
-    setState(() => _future = SupabaseService.fetchSoal());
+    setState(() => _future = SupabaseService.fetchSoal(widget.kelasId));
   }
 
   Future<void> _buka([Soal? soal]) async {
@@ -191,7 +216,7 @@ class _TabSoalState extends State<_TabSoal> {
     }
   }
 
-  /// Mengambil 5 soal dari REST API Open Trivia DB lalu menyimpannya ke Supabase.
+  /// Mengambil 5 soal dari REST API Open Trivia DB lalu menyimpannya ke kelas ini.
   Future<void> _impor() async {
     setState(() => _mengimpor = true);
     try {

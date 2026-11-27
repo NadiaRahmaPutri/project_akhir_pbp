@@ -2,9 +2,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'trivia_service.dart';
 
 /// Operasi tambah, ubah, dan hapus (CRUD) materi dan soal.
-/// Hanya berhasil untuk akun berperan 'guru' karena dibatasi RLS di database.
+/// Hanya berhasil untuk guru pemilik kelas karena dibatasi RLS di database.
 class KelolaService {
   static SupabaseClient get _db => Supabase.instance.client;
+
+  /// Kelas yang sedang dikelola guru. Diisi saat halaman kelola dibuka.
+  static int? kelasAktifId;
+
+  static int get _kelasId {
+    final id = kelasAktifId;
+    if (id == null) throw StateError('Kelas belum dipilih');
+    return id;
+  }
 
   // ---------- Materi ----------
   static Future<void> tambahMateri(
@@ -14,6 +23,7 @@ class KelolaService {
     String? gambarUrl,
   }) async {
     await _db.from('materi').insert({
+      'kelas_id': _kelasId,
       'judul': judul,
       'ringkasan': ringkasan,
       'isi': isi,
@@ -48,6 +58,7 @@ class KelolaService {
     int waktuDetik,
   ) async {
     await _db.from('soal').insert({
+      'kelas_id': _kelasId,
       'pertanyaan': pertanyaan,
       'pilihan': pilihan,
       'jawaban_benar': jawabanBenar,
@@ -74,11 +85,14 @@ class KelolaService {
     await _db.from('soal').delete().eq('id', id);
   }
 
-  /// Menyimpan beberapa soal sekaligus (hasil impor dari Open Trivia DB).
+  /// Menyimpan beberapa soal sekaligus (hasil impor dari Open Trivia DB)
+  /// ke kelas yang sedang dikelola.
   static Future<void> imporSoal(List<SoalImpor> daftar) async {
+    final kelasId = _kelasId;
     await _db.from('soal').insert(
           daftar
               .map((s) => {
+                    'kelas_id': kelasId,
                     'pertanyaan': s.pertanyaan,
                     'pilihan': s.pilihan,
                     'jawaban_benar': s.jawabanBenar,

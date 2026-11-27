@@ -12,6 +12,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _namaC = TextEditingController();
+  final _nimC = TextEditingController();
   final _emailC = TextEditingController();
   final _passC = TextEditingController();
   bool _daftar = false;
@@ -20,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void dispose() {
     _namaC.dispose();
+    _nimC.dispose();
     _emailC.dispose();
     _passC.dispose();
     super.dispose();
@@ -38,6 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (_daftar) {
         final res = await SupabaseService.register(
           _namaC.text.trim(),
+          _nimC.text.replaceAll(RegExp(r'\s+'), '').toUpperCase(),
           _emailC.text.trim(),
           _passC.text,
         );
@@ -51,7 +54,11 @@ class _LoginScreenState extends State<LoginScreen> {
         await SupabaseService.login(_emailC.text.trim(), _passC.text);
       }
     } on AuthException catch (e) {
-      _pesan(e.message);
+      if (e.message.contains('Database error')) {
+        _pesan('Pendaftaran gagal. NIM atau email mungkin sudah dipakai akun lain.');
+      } else {
+        _pesan(e.message);
+      }
     } catch (_) {
       _pesan('Terjadi kesalahan. Periksa koneksi internet lalu coba lagi.');
     } finally {
@@ -90,6 +97,23 @@ class _LoginScreenState extends State<LoginScreen> {
                         validator: (v) => (v == null || v.trim().isEmpty)
                             ? 'Nama wajib diisi'
                             : null,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _nimC,
+                        decoration: const InputDecoration(
+                          labelText: 'NIM',
+                          helperText: 'Dipakai untuk masuk ke kelasmu otomatis',
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (v) {
+                          final nim = (v ?? '').replaceAll(RegExp(r'\s+'), '');
+                          if (nim.isEmpty) return 'NIM wajib diisi';
+                          if (!RegExp(r'^[0-9A-Za-z.-]{4,25}$').hasMatch(nim)) {
+                            return 'NIM tidak valid (4-25 huruf atau angka)';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 12),
                     ],

@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/kelas_service.dart';
 import '../widgets/error_view.dart';
 import 'kelola_screen.dart';
+import 'mahasiswa_kelas_screen.dart';
 import 'nilai_kelas_screen.dart';
 
-/// Guru: memilih/membuat kelas, lalu mengelola materi, soal, dan nilai.
-/// Siswa: memasukkan kode untuk bergabung ke kelas.
+/// Dosen: memilih/membuat kelas, lalu mengelola materi, soal, daftar
+/// mahasiswa, dan nilai. Mahasiswa masuk kelas otomatis lewat NIM.
 class KelasScreen extends StatefulWidget {
-  final bool isGuru;
-
-  const KelasScreen({super.key, required this.isGuru});
+  const KelasScreen({super.key});
 
   @override
   State<KelasScreen> createState() => _KelasScreenState();
@@ -19,14 +17,6 @@ class KelasScreen extends StatefulWidget {
 
 class _KelasScreenState extends State<KelasScreen> {
   late Future<List<Kelas>> _kelas = KelasService.fetchKelas();
-  final _kodeCtrl = TextEditingController();
-  bool _proses = false;
-
-  @override
-  void dispose() {
-    _kodeCtrl.dispose();
-    super.dispose();
-  }
 
   void _muatUlang() {
     setState(() => _kelas = KelasService.fetchKelas());
@@ -36,7 +26,7 @@ class _KelasScreenState extends State<KelasScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(teks),
-        duration: const Duration(seconds: 10),
+        duration: const Duration(seconds: 8),
       ),
     );
   }
@@ -63,13 +53,29 @@ class _KelasScreenState extends State<KelasScreen> {
                 Navigator.pop(ctx);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const KelolaScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => KelolaScreen(kelas: k),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.how_to_reg),
+              title: const Text('Daftar mahasiswa'),
+              subtitle: const Text('Tempel NIM dari Excel'),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MahasiswaKelasScreen(kelas: k),
+                  ),
                 );
               },
             ),
             ListTile(
               leading: const Icon(Icons.groups),
-              title: const Text('Nilai siswa'),
+              title: const Text('Nilai mahasiswa'),
               subtitle: const Text('Lihat nilai dan ekspor CSV'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -99,8 +105,8 @@ class _KelasScreenState extends State<KelasScreen> {
           autofocus: true,
           textCapitalization: TextCapitalization.words,
           decoration: const InputDecoration(
-            labelText: 'Nama kelas',
-            hintText: 'Contoh: Informatika A',
+            labelText: 'Nama kelas / mata kuliah',
+            hintText: 'Contoh: Basis Data - A',
           ),
         ),
         actions: [
@@ -118,9 +124,9 @@ class _KelasScreenState extends State<KelasScreen> {
     if (nama == null || nama.isEmpty) return;
 
     try {
-      final k = await KelasService.buatKelas(nama);
+      await KelasService.buatKelas(nama);
       if (!mounted) return;
-      _pesan('Kelas dibuat. Kode: ${k.kode}');
+      _pesan('Kelas dibuat. Buka kelas lalu tempel daftar mahasiswa.');
       _muatUlang();
     } on PostgrestException catch (e) {
       if (!mounted) return;
@@ -137,7 +143,7 @@ class _KelasScreenState extends State<KelasScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Hapus kelas?'),
         content: Text(
-            'Kelas "${k.nama}" akan dihapus beserta daftar anggotanya.'),
+            'Kelas "${k.nama}" akan dihapus beserta anggota, materi, soal, dan nilainya.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -165,82 +171,24 @@ class _KelasScreenState extends State<KelasScreen> {
     }
   }
 
-  Future<void> _gabung() async {
-    final kode = _kodeCtrl.text.trim();
-    if (kode.isEmpty) {
-      _pesan('Masukkan kode kelas dulu.');
-      return;
-    }
-    setState(() => _proses = true);
-    try {
-      final nama = await KelasService.gabung(kode);
-      if (!mounted) return;
-      _kodeCtrl.clear();
-      _pesan('Berhasil bergabung ke kelas $nama');
-      _muatUlang();
-    } on PostgrestException catch (e) {
-      if (!mounted) return;
-      _pesan(e.message);
-    } catch (e) {
-      if (!mounted) return;
-      _pesan('Gagal bergabung: $e');
-    } finally {
-      if (mounted) setState(() => _proses = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final guru = widget.isGuru;
     return Scaffold(
-      appBar: AppBar(title: Text(guru ? 'Kelas saya' : 'Gabung kelas')),
-      floatingActionButton: guru
-          ? FloatingActionButton.extended(
-              onPressed: _buatKelas,
-              icon: const Icon(Icons.add),
-              label: const Text('Buat kelas'),
-            )
-          : null,
+      appBar: AppBar(title: const Text('Kelas saya')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _buatKelas,
+        icon: const Icon(Icons.add),
+        label: const Text('Buat kelas'),
+      ),
       body: Column(
         children: [
-          if (guru)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Text(
-                'Ketuk kelas untuk mengelola materi, soal, dan nilai.',
-                textAlign: TextAlign.center,
-              ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Text(
+              'Ketuk kelas untuk mengelola materi, soal, daftar mahasiswa, dan nilai.',
+              textAlign: TextAlign.center,
             ),
-          if (!guru)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _kodeCtrl,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: 'Kode kelas',
-                        hintText: 'Contoh: K7M2QX',
-                      ),
-                      onSubmitted: (_) => _gabung(),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  FilledButton(
-                    onPressed: _proses ? null : _gabung,
-                    child: _proses
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Gabung'),
-                  ),
-                ],
-              ),
-            ),
+          ),
           Expanded(
             child: FutureBuilder<List<Kelas>>(
               future: _kelas,
@@ -253,20 +201,18 @@ class _KelasScreenState extends State<KelasScreen> {
                 }
                 final daftar = snapshot.data ?? [];
                 if (daftar.isEmpty) {
-                  return Center(
+                  return const Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(24),
+                      padding: EdgeInsets.all(24),
                       child: Text(
-                        guru
-                            ? 'Belum ada kelas. Tekan "Buat kelas" untuk memulai.'
-                            : 'Kamu belum bergabung ke kelas mana pun.',
+                        'Belum ada kelas. Tekan "Buat kelas" untuk memulai.',
                         textAlign: TextAlign.center,
                       ),
                     ),
                   );
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                   itemCount: daftar.length,
                   itemBuilder: (context, i) {
                     final k = daftar[i];
@@ -291,29 +237,12 @@ class _KelasScreenState extends State<KelasScreen> {
                           style:
                               const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                        subtitle: guru ? Text('Kode: ${k.kode}') : null,
-                        onTap: guru ? () => _bukaKelas(k) : null,
-                        trailing: guru
-                            ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    tooltip: 'Salin kode',
-                                    icon: const Icon(Icons.copy),
-                                    onPressed: () {
-                                      Clipboard.setData(
-                                          ClipboardData(text: k.kode));
-                                      _pesan('Kode ${k.kode} disalin');
-                                    },
-                                  ),
-                                  IconButton(
-                                    tooltip: 'Hapus kelas',
-                                    icon: const Icon(Icons.delete_outline),
-                                    onPressed: () => _hapus(k),
-                                  ),
-                                ],
-                              )
-                            : null,
+                        onTap: () => _bukaKelas(k),
+                        trailing: IconButton(
+                          tooltip: 'Hapus kelas',
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => _hapus(k),
+                        ),
                       ),
                     );
                   },

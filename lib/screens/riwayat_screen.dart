@@ -4,17 +4,20 @@ import '../services/supabase_service.dart';
 import '../widgets/error_view.dart';
 
 class RiwayatScreen extends StatefulWidget {
-  const RiwayatScreen({super.key});
+  final int kelasId;
+
+  const RiwayatScreen({super.key, required this.kelasId});
 
   @override
   State<RiwayatScreen> createState() => _RiwayatScreenState();
 }
 
 class _RiwayatScreenState extends State<RiwayatScreen> {
-  late Future<List<HasilKuis>> _future = SupabaseService.fetchRiwayat();
+  late Future<List<HasilKuis>> _future =
+      SupabaseService.fetchRiwayat(widget.kelasId);
 
   void _muatUlang() {
-    setState(() => _future = SupabaseService.fetchRiwayat());
+    setState(() => _future = SupabaseService.fetchRiwayat(widget.kelasId));
   }
 
   String _format(DateTime w) {
