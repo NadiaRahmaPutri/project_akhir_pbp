@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/hasil_kuis.dart';
 import '../models/soal.dart';
@@ -55,19 +56,69 @@ class _KuisBody extends StatefulWidget {
 class _KuisBodyState extends State<_KuisBody> {
   int _indeks = 0;
   bool _menyimpan = false;
+  // Batas waktu tiap soal diatur oleh guru (kolom waktu_detik di database).
+  late int _sisaDetik = widget.soal.first.waktuDetik;
+  Timer? _timer;
   late final List<int?> _jawaban =
       List<int?>.filled(widget.soal.length, null);
 
   bool get _soalTerakhir => _indeks == widget.soal.length - 1;
 
+  @override
+  void initState() {
+    super.initState();
+    _mulaiTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _mulaiTimer() {
+    _timer?.cancel();
+    _sisaDetik = widget.soal[_indeks].waktuDetik;
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || _menyimpan) return;
+      if (_sisaDetik <= 1) {
+        _timer?.cancel();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 2),
+            content: Text(
+              _soalTerakhir
+                  ? 'Waktu habis. Kuis diselesaikan.'
+                  : 'Waktu habis. Lanjut ke soal berikutnya.',
+            ),
+          ),
+        );
+        _lanjut();
+      } else {
+        setState(() => _sisaDetik--);
+      }
+    });
+  }
+
+  String get _waktuTeks {
+    final menit = (_sisaDetik ~/ 60).toString().padLeft(2, '0');
+    final detik = (_sisaDetik % 60).toString().padLeft(2, '0');
+    return '$menit:$detik';
+  }
+
   Future<void> _lanjut() async {
+    if (_menyimpan) return;
+    _timer?.cancel();
+
     if (!_soalTerakhir) {
       setState(() => _indeks++);
+      _mulaiTimer();
       return;
     }
 
     setState(() => _menyimpan = true);
 
+    // Soal yang tidak dijawab (waktu habis) dihitung salah.
     int benar = 0;
     for (var i = 0; i < widget.soal.length; i++) {
       if (_jawaban[i] == widget.soal[i].jawabanBenar) benar++;
@@ -97,6 +148,11 @@ class _KuisBodyState extends State<_KuisBody> {
   @override
   Widget build(BuildContext context) {
     final soal = widget.soal[_indeks];
+    final skema = Theme.of(context).colorScheme;
+    final genting = _sisaDetik <= soal.waktuDetik * 0.3;
+    final warnaWaktu = genting ? skema.error : skema.primary;
+    final latarWaktu =
+        genting ? const Color(0xFFFDE8E8) : const Color(0xFFE3EEFF);
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -107,8 +163,35 @@ class _KuisBodyState extends State<_KuisBody> {
             value: (_indeks + 1) / widget.soal.length,
           ),
           const SizedBox(height: 12),
-          Text('Soal ${_indeks + 1} dari ${widget.soal.length}'),
-          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Soal ${_indeks + 1} dari ${widget.soal.length}'),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: latarWaktu,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.timer_outlined, size: 18, color: warnaWaktu),
+                    const SizedBox(width: 4),
+                    Text(
+                      _waktuTeks,
+                      style: TextStyle(
+                        color: warnaWaktu,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Text(
             soal.pertanyaan,
             style: Theme.of(context).textTheme.titleLarge,

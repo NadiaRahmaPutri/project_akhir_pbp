@@ -66,9 +66,7 @@ class _TabMateriState extends State<_TabMateri> {
   late Future<List<Materi>> _future = SupabaseService.fetchMateri();
 
   void _muat() {
-    setState(() {
-      _future = SupabaseService.fetchMateri();
-    });
+    setState(() => _future = SupabaseService.fetchMateri());
   }
 
   Future<void> _buka([Materi? materi]) async {
@@ -87,10 +85,9 @@ class _TabMateriState extends State<_TabMateri> {
       if (!mounted) return;
       _pesan(context, 'Materi dihapus.');
       _muat();
-    } catch (e) {
-      debugPrint('HAPUS MATERI ERROR: $e');
+    } catch (_) {
       if (!mounted) return;
-      _pesan(context, 'Gagal menghapus materi: $e');
+      _pesan(context, 'Gagal menghapus. Periksa koneksi internet.');
     }
   }
 
@@ -169,9 +166,7 @@ class _TabSoalState extends State<_TabSoal> {
   bool _mengimpor = false;
 
   void _muat() {
-    setState(() {
-      _future = SupabaseService.fetchSoal();
-    });
+    setState(() => _future = SupabaseService.fetchSoal());
   }
 
   Future<void> _buka([Soal? soal]) async {
@@ -190,10 +185,9 @@ class _TabSoalState extends State<_TabSoal> {
       if (!mounted) return;
       _pesan(context, 'Soal dihapus.');
       _muat();
-    } catch (e) {
-      debugPrint('HAPUS SOAL ERROR: $e');
+    } catch (_) {
       if (!mounted) return;
-      _pesan(context, 'Gagal menghapus soal: $e');
+      _pesan(context, 'Gagal menghapus. Periksa koneksi internet.');
     }
   }
 
@@ -209,10 +203,9 @@ class _TabSoalState extends State<_TabSoal> {
     } on TriviaException catch (e) {
       if (!mounted) return;
       _pesan(context, e.pesan);
-    } catch (e) {
-      debugPrint('IMPOR SOAL ERROR: $e');
+    } catch (_) {
       if (!mounted) return;
-      _pesan(context, 'Gagal menyimpan soal: $e');
+      _pesan(context, 'Gagal menyimpan soal. Periksa koneksi internet.');
     } finally {
       if (mounted) setState(() => _mengimpor = false);
     }
@@ -281,7 +274,7 @@ class _TabSoalState extends State<_TabSoal> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         subtitle: Text(
-                          'Jawaban benar: ${_jawabanBenar(s)}',
+                          'Jawaban benar: ${_jawabanBenar(s)} • Waktu: ${s.waktuDetik} detik',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),

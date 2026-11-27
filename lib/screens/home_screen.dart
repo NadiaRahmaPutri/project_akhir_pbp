@@ -1,7 +1,7 @@
-import 'kelola_screen.dart';
 import 'package:flutter/material.dart';
 import '../services/supabase_service.dart';
 import '../widgets/error_view.dart';
+import 'kelas_screen.dart';
 import 'kuis_screen.dart';
 import 'materi_list_screen.dart';
 import 'riwayat_screen.dart';
@@ -51,55 +51,113 @@ class _HomeScreenState extends State<HomeScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text(
-                nama.isEmpty ? 'Halo!' : 'Halo, $nama',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Chip(label: Text(isGuru ? 'Guru' : 'Siswa')),
-              ),
-              const SizedBox(height: 8),
-              const _MenuTile(
-                icon: Icons.menu_book,
-                judul: 'Materi',
-                keterangan: 'Baca modul pembelajaran',
-                tujuan: MateriListScreen(),
-              ),
-              const _MenuTile(
-                icon: Icons.quiz,
-                judul: 'Kuis',
-                keterangan: 'Kerjakan soal pilihan ganda',
-                tujuan: KuisScreen(),
-              ),
-              const _MenuTile(
-                icon: Icons.history,
-                judul: 'Riwayat nilai',
-                keterangan: 'Lihat hasil kuis sebelumnya',
-                tujuan: RiwayatScreen(),
-              ),
-              // Fitur khusus guru (authorization). Diisi pada minggu 11.
-              if (isGuru)
-                Card(
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    leading: const Icon(Icons.edit_note, size: 32),
-                    title: const Text('Kelola materi dan soal'),
-                    subtitle: const Text('Khusus guru'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const KelolaScreen()),
-                    ),
-                  ),
+              _Sapaan(nama: nama, isGuru: isGuru),
+              const SizedBox(height: 20),
+              if (isGuru) ...const [
+                // Menu khusus guru
+                _MenuTile(
+                  icon: Icons.class_,
+                  judul: 'Kelas saya',
+                  keterangan: 'Kelola materi, soal, dan nilai per kelas',
+                  tujuan: KelasScreen(isGuru: true),
                 ),
+              ] else ...const [
+                // Menu khusus siswa
+                _MenuTile(
+                  icon: Icons.login,
+                  judul: 'Gabung kelas',
+                  keterangan: 'Masukkan kode kelas dari guru',
+                  tujuan: KelasScreen(isGuru: false),
+                ),
+                _MenuTile(
+                  icon: Icons.menu_book,
+                  judul: 'Materi',
+                  keterangan: 'Baca modul pembelajaran',
+                  tujuan: MateriListScreen(),
+                ),
+                _MenuTile(
+                  icon: Icons.quiz,
+                  judul: 'Kuis',
+                  keterangan: 'Kerjakan soal pilihan ganda',
+                  tujuan: KuisScreen(),
+                ),
+                _MenuTile(
+                  icon: Icons.history,
+                  judul: 'Riwayat nilai',
+                  keterangan: 'Lihat hasil kuis kamu sendiri',
+                  tujuan: RiwayatScreen(),
+                ),
+              ],
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// Banner biru berisi sapaan dan peran pengguna.
+class _Sapaan extends StatelessWidget {
+  final String nama;
+  final bool isGuru;
+
+  const _Sapaan({required this.nama, required this.isGuru});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2F80ED), Color(0xFF56A0FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Selamat datang,',
+                  style: TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  nama.isEmpty ? 'Pengguna' : nama,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0x33FFFFFF),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    isGuru ? 'Guru' : 'Siswa',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            isGuru ? Icons.school : Icons.auto_stories,
+            size: 56,
+            color: Colors.white54,
+          ),
+        ],
       ),
     );
   }
@@ -124,8 +182,19 @@ class _MenuTile extends StatelessWidget {
       child: ListTile(
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Icon(icon, size: 32),
-        title: Text(judul),
+        leading: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE3EEFF),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: Theme.of(context).colorScheme.primary),
+        ),
+        title: Text(
+          judul,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
         subtitle: Text(keterangan),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => Navigator.push(

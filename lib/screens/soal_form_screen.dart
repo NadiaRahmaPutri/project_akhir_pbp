@@ -23,6 +23,8 @@ class _SoalFormScreenState extends State<SoalFormScreen> {
     final teks = (s != null && i < s.pilihan.length) ? s.pilihan[i] : '';
     return TextEditingController(text: teks);
   });
+  late final TextEditingController _waktuC =
+      TextEditingController(text: '${widget.soal?.waktuDetik ?? 30}');
   late int _benar = _awalBenar();
   bool _menyimpan = false;
 
@@ -39,6 +41,7 @@ class _SoalFormScreenState extends State<SoalFormScreen> {
     for (final c in _pilihanC) {
       c.dispose();
     }
+    _waktuC.dispose();
     super.dispose();
   }
 
@@ -48,12 +51,19 @@ class _SoalFormScreenState extends State<SoalFormScreen> {
 
     final pertanyaan = _pertanyaanC.text.trim();
     final pilihan = _pilihanC.map((c) => c.text.trim()).toList();
+    final waktu = int.parse(_waktuC.text.trim());
 
     try {
       if (_edit) {
-        await KelolaService.ubahSoal(widget.soal!.id, pertanyaan, pilihan, _benar);
+        await KelolaService.ubahSoal(
+          widget.soal!.id,
+          pertanyaan,
+          pilihan,
+          _benar,
+          waktu,
+        );
       } else {
-        await KelolaService.tambahSoal(pertanyaan, pilihan, _benar);
+        await KelolaService.tambahSoal(pertanyaan, pilihan, _benar, waktu);
       }
       if (!mounted) return;
       Navigator.pop(context, true);
@@ -113,6 +123,24 @@ class _SoalFormScreenState extends State<SoalFormScreen> {
               ],
               selected: {_benar},
               onSelectionChanged: (s) => setState(() => _benar = s.first),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _waktuC,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Batas waktu soal ini (detik)',
+                helperText: 'Antara 10 dan 600 detik',
+                border: OutlineInputBorder(),
+              ),
+              validator: (v) {
+                final angka = int.tryParse((v ?? '').trim());
+                if (angka == null) return 'Isi dengan angka';
+                if (angka < 10 || angka > 600) {
+                  return 'Batas waktu harus 10 sampai 600 detik';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: 20),
             FilledButton(

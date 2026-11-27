@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,10 +31,7 @@ class KuisApp extends StatelessWidget {
     return MaterialApp(
       title: 'Media Pembelajaran & Kuis',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1F6F8B)),
-      ),
+      theme: AppTheme.light,
       home: const AuthGate(),
     );
   }

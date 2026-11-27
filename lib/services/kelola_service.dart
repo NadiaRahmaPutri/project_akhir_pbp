@@ -7,19 +7,32 @@ class KelolaService {
   static SupabaseClient get _db => Supabase.instance.client;
 
   // ---------- Materi ----------
-  static Future<void> tambahMateri(String judul, String ringkasan, String isi) async {
+  static Future<void> tambahMateri(
+    String judul,
+    String ringkasan,
+    String isi, {
+    String? gambarUrl,
+  }) async {
     await _db.from('materi').insert({
       'judul': judul,
       'ringkasan': ringkasan,
       'isi': isi,
+      if (gambarUrl != null) 'gambar_url': gambarUrl,
     });
   }
 
-  static Future<void> ubahMateri(int id, String judul, String ringkasan, String isi) async {
+  static Future<void> ubahMateri(
+    int id,
+    String judul,
+    String ringkasan,
+    String isi, {
+    String? gambarUrl,
+  }) async {
     await _db.from('materi').update({
       'judul': judul,
       'ringkasan': ringkasan,
       'isi': isi,
+      if (gambarUrl != null) 'gambar_url': gambarUrl,
     }).eq('id', id);
   }
 
@@ -28,19 +41,32 @@ class KelolaService {
   }
 
   // ---------- Soal ----------
-  static Future<void> tambahSoal(String pertanyaan, List<String> pilihan, int jawabanBenar) async {
+  static Future<void> tambahSoal(
+    String pertanyaan,
+    List<String> pilihan,
+    int jawabanBenar,
+    int waktuDetik,
+  ) async {
     await _db.from('soal').insert({
       'pertanyaan': pertanyaan,
       'pilihan': pilihan,
       'jawaban_benar': jawabanBenar,
+      'waktu_detik': waktuDetik,
     });
   }
 
-  static Future<void> ubahSoal(int id, String pertanyaan, List<String> pilihan, int jawabanBenar) async {
+  static Future<void> ubahSoal(
+    int id,
+    String pertanyaan,
+    List<String> pilihan,
+    int jawabanBenar,
+    int waktuDetik,
+  ) async {
     await _db.from('soal').update({
       'pertanyaan': pertanyaan,
       'pilihan': pilihan,
       'jawaban_benar': jawabanBenar,
+      'waktu_detik': waktuDetik,
     }).eq('id', id);
   }
 
