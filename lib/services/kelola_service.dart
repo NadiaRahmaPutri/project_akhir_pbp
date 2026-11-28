@@ -50,18 +50,21 @@ class KelolaService {
     await _db.from('materi').delete().eq('id', id);
   }
 
-  // ---------- Soal ----------
-  static Future<void> tambahSoal(
-    String pertanyaan,
-    List<String> pilihan,
-    int jawabanBenar,
-    int waktuDetik,
-  ) async {
+  // ---------- Soal (milik sebuah kuis, tiap pilihan punya bobot) ----------
+  static Future<void> tambahSoal({
+    required int kelasId,
+    required int kuisId,
+    required String pertanyaan,
+    required List<String> pilihan,
+    required List<int> bobot,
+    required int waktuDetik,
+  }) async {
     await _db.from('soal').insert({
-      'kelas_id': _kelasId,
+      'kelas_id': kelasId,
+      'kuis_id': kuisId,
       'pertanyaan': pertanyaan,
       'pilihan': pilihan,
-      'jawaban_benar': jawabanBenar,
+      'bobot': bobot,
       'waktu_detik': waktuDetik,
     });
   }
@@ -70,13 +73,13 @@ class KelolaService {
     int id,
     String pertanyaan,
     List<String> pilihan,
-    int jawabanBenar,
+    List<int> bobot,
     int waktuDetik,
   ) async {
     await _db.from('soal').update({
       'pertanyaan': pertanyaan,
       'pilihan': pilihan,
-      'jawaban_benar': jawabanBenar,
+      'bobot': bobot,
       'waktu_detik': waktuDetik,
     }).eq('id', id);
   }
@@ -86,16 +89,23 @@ class KelolaService {
   }
 
   /// Menyimpan beberapa soal sekaligus (hasil impor dari Open Trivia DB)
-  /// ke kelas yang sedang dikelola.
-  static Future<void> imporSoal(List<SoalImpor> daftar) async {
-    final kelasId = _kelasId;
+  /// ke kuis tertentu. Jawaban benar berbobot 1, sisanya 0.
+  static Future<void> imporSoal(
+    int kelasId,
+    int kuisId,
+    List<SoalImpor> daftar,
+  ) async {
     await _db.from('soal').insert(
           daftar
               .map((s) => {
                     'kelas_id': kelasId,
+                    'kuis_id': kuisId,
                     'pertanyaan': s.pertanyaan,
                     'pilihan': s.pilihan,
-                    'jawaban_benar': s.jawabanBenar,
+                    'bobot': List<int>.generate(
+                      s.pilihan.length,
+                      (i) => i == s.jawabanBenar ? 1 : 0,
+                    ),
                   })
               .toList(),
         );

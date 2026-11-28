@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/materi.dart';
-import '../models/soal.dart';
 import '../services/kelas_service.dart';
 import '../services/kelola_service.dart';
 import '../services/supabase_service.dart';
-import '../services/trivia_service.dart';
 import '../widgets/error_view.dart';
 import 'materi_form_screen.dart';
-import 'soal_form_screen.dart';
+import 'kuis_tab.dart';
 
 void _pesan(BuildContext context, String teks) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(teks)));
@@ -34,7 +32,7 @@ Future<bool> _konfirmasiHapus(BuildContext context, String nama) async {
   return hasil == true;
 }
 
-/// Halaman guru: kelola materi dan soal untuk satu kelas.
+/// Halaman dosen: kelola materi dan kuis (beserta soalnya) untuk satu kelas.
 class KelolaScreen extends StatefulWidget {
   final Kelas kelas;
 
@@ -60,13 +58,13 @@ class _KelolaScreenState extends State<KelolaScreen> {
         appBar: AppBar(
           title: Text('Kelola: ${widget.kelas.nama}'),
           bottom: const TabBar(
-            tabs: [Tab(text: 'Materi'), Tab(text: 'Soal')],
+            tabs: [Tab(text: 'Materi'), Tab(text: 'Kuis')],
           ),
         ),
         body: TabBarView(
           children: [
             _TabMateri(kelasId: widget.kelas.id),
-            _TabSoal(kelasId: widget.kelas.id),
+            KuisTab(kelas: widget.kelas),
           ],
         ),
       ),
@@ -89,7 +87,7 @@ class _TabMateriState extends State<_TabMateri> {
       SupabaseService.fetchMateri(widget.kelasId);
 
   void _muat() {
-    setState(() => _future = SupabaseService.fetchMateri(widget.kelasId));
+    setState(() { _future = SupabaseService.fetchMateri(widget.kelasId); });
   }
 
   Future<void> _buka([Materi? materi]) async {
@@ -171,162 +169,6 @@ class _TabMateriState extends State<_TabMateri> {
             },
           );
         },
-      ),
-    );
-  }
-}
-
-// ======================= TAB SOAL =======================
-class _TabSoal extends StatefulWidget {
-  final int kelasId;
-
-  const _TabSoal({required this.kelasId});
-
-  @override
-  State<_TabSoal> createState() => _TabSoalState();
-}
-
-class _TabSoalState extends State<_TabSoal> {
-  late Future<List<Soal>> _future = SupabaseService.fetchSoal(widget.kelasId);
-  bool _mengimpor = false;
-
-  void _muat() {
-    setState(() => _future = SupabaseService.fetchSoal(widget.kelasId));
-  }
-
-  Future<void> _buka([Soal? soal]) async {
-    final berubah = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => SoalFormScreen(soal: soal)),
-    );
-    if (berubah == true && mounted) _muat();
-  }
-
-  Future<void> _hapus(Soal s) async {
-    final yakin = await _konfirmasiHapus(context, s.pertanyaan);
-    if (!yakin || !mounted) return;
-    try {
-      await KelolaService.hapusSoal(s.id);
-      if (!mounted) return;
-      _pesan(context, 'Soal dihapus.');
-      _muat();
-    } catch (_) {
-      if (!mounted) return;
-      _pesan(context, 'Gagal menghapus. Periksa koneksi internet.');
-    }
-  }
-
-  /// Mengambil 5 soal dari REST API Open Trivia DB lalu menyimpannya ke kelas ini.
-  Future<void> _impor() async {
-    setState(() => _mengimpor = true);
-    try {
-      final daftar = await TriviaService.ambilSoal(jumlah: 5);
-      await KelolaService.imporSoal(daftar);
-      if (!mounted) return;
-      _pesan(context, '${daftar.length} soal berhasil diimpor.');
-      _muat();
-    } on TriviaException catch (e) {
-      if (!mounted) return;
-      _pesan(context, e.pesan);
-    } catch (_) {
-      if (!mounted) return;
-      _pesan(context, 'Gagal menyimpan soal. Periksa koneksi internet.');
-    } finally {
-      if (mounted) setState(() => _mengimpor = false);
-    }
-  }
-
-  String _jawabanBenar(Soal s) {
-    if (s.jawabanBenar >= 0 && s.jawabanBenar < s.pilihan.length) {
-      return s.pilihan[s.jawabanBenar];
-    }
-    return '-';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'Tambah soal',
-        onPressed: () => _buka(),
-        child: const Icon(Icons.add),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _mengimpor ? null : _impor,
-                icon: _mengimpor
-                    ? const SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.cloud_download),
-                label: const Text('Impor 5 soal dari Open Trivia DB'),
-              ),
-            ),
-          ),
-          Expanded(
-            child: FutureBuilder<List<Soal>>(
-              future: _future,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return ErrorView(onRetry: _muat);
-                }
-                final daftar = snapshot.data ?? [];
-                if (daftar.isEmpty) {
-                  return const Center(
-                    child: Text('Belum ada soal. Tekan + untuk menambah.'),
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
-                  itemCount: daftar.length,
-                  itemBuilder: (context, i) {
-                    final s = daftar[i];
-                    return Card(
-                      child: ListTile(
-                        title: Text(
-                          s.pertanyaan,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          'Jawaban benar: ${_jawabanBenar(s)} • Waktu: ${s.waktuDetik} detik',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        onTap: () => _buka(s),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: 'Ubah',
-                              icon: const Icon(Icons.edit),
-                              onPressed: () => _buka(s),
-                            ),
-                            IconButton(
-                              tooltip: 'Hapus',
-                              icon: const Icon(Icons.delete_outline),
-                              onPressed: () => _hapus(s),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/kelas_service.dart';
-import 'kuis_screen.dart';
+import 'kuis_daftar_screen.dart';
 import 'materi_list_screen.dart';
-import 'riwayat_screen.dart';
 
 /// Halaman di dalam satu kelas untuk siswa.
 class SiswaKelasScreen extends StatelessWidget {
@@ -26,14 +25,8 @@ class SiswaKelasScreen extends StatelessWidget {
           _Menu(
             icon: Icons.quiz,
             judul: 'Kuis',
-            keterangan: 'Kerjakan soal pilihan ganda',
-            tujuan: KuisScreen(kelasId: kelas.id),
-          ),
-          _Menu(
-            icon: Icons.history,
-            judul: 'Riwayat nilai',
-            keterangan: 'Lihat hasil kuis kamu di kelas ini',
-            tujuan: RiwayatScreen(kelasId: kelas.id),
+            keterangan: 'Daftar kuis, pengerjaan, dan nilaimu',
+            tujuan: KuisDaftarScreen(kelas: kelas),
           ),
         ],
       ),
